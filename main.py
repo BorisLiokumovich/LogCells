@@ -47,9 +47,9 @@ class Cell():
                 self.grow()
 
             if field_mana[self.x][self.y] > 0:
-                self.energy += min(field_mana[self.x][self.y], 5)
-                field_mana[self.x][self.y] -= min(field_mana[self.x][self.y], 5)
-            self.energy -= 1
+                self.energy += min(field_mana[self.x][self.y], 6)
+                field_mana[self.x][self.y] -= min(field_mana[self.x][self.y],6)
+            self.energy -= 2
             self.dust += 1
             if self.energy <= 0 or self.dust > self.death_time:
                 self.die()
@@ -58,34 +58,36 @@ class Cell():
         self.genome[0] = -1
         self.energy = 0
         self.dust = 0
-        self.color = (0, 0, 0)
+        self.color = (255, 255, 255)
 
     def grow(self):
         for i in range(len(shifter)):
             cell = field[(self.x + shifter_cen[i][0]) % 100][(self.y + shifter_cen[i][1]) % 100]
-            try:
-                new_gen = self.genome[2 + self.genome[0]][i]
-            except IndexError:
-                print(self.genome)
+            # try:
+            new_gen = self.genome[2 + self.genome[0]][i]
+            # except IndexError:
+            #     print(self.genome)
 
             if new_gen == -1:
                 cell.die()
                 self.energy -= 4
             if new_gen >= 10:
                 continue
-            if cell.genome[0] < 0:
-                cell.genome = self.genome  # **
+            if cell.genome[0] == -1:
+                cell.genome = self.genome[:]  # **
                 if random() < 0.001:  # мутация
-                    cell.genome[2 + randint(0, 9)][randint(0, 4)] = randint(0, 20)
+                    cell.genome[2 + randint(0, 9)][randint(0, 4)] = randint(-1, 20)
                     color_shift = 20
                     cell.genome[1] = ((self.color[0] + randint(-color_shift, color_shift)) % 255,
                                       (self.color[1] + randint(-color_shift, color_shift)) % 255,
                                       (self.color[2] + randint(-color_shift, color_shift)) % 255)
                 cell.genome[0] = new_gen
                 cell.color = cell.genome[1]
+
+                cell.death_time = self.death_time
                 cell.dust = 0
-                cell.energy = 4
-                self.energy -= 4
+                cell.energy = self.energy//2
+                self.energy //= 2
 
 
 def create_genome():
@@ -93,9 +95,8 @@ def create_genome():
     for z in range(10):
         gen = []
         for z0 in range(5):
-            gen.append(randint(0, 20))
+            gen.append(randint(-1, 20))
         genome.append(gen)
-    print(genome)
     return genome
 
 
@@ -169,8 +170,8 @@ while running:
 
             if flag_c and field[i][j].genome[0] != -1:
                 draw.rect(screen, field[i][j].color, Rect(i * k, j * k, k, k))
-            text_surface = font.render(str(field[i][j].genome[0]), True, (200, 200, 200))
-            screen.blit(text_surface, (i * k, j * k))
+            # text_surface = font.render(str(field[i][j].genome[0]), True, (200, 200, 200))
+            # screen.blit(text_surface, (i * k, j * k))
 
     for i in range(100):
         draw.line(screen, (100, 100, 100), (i * k, 0), (i * k, HEIGHT))
