@@ -45,9 +45,10 @@ class Cell():
         self.color = self.genome[1]
 
         self.eat = self.genome[2][5]
-        self.death_time = self.genome[2][6]
-        self.energy_losing = self.genome[2][7]
-        self.energy = 10
+        self.death_time = max(self.genome[2][6],1)
+
+        self.energy_losing = max(self.genome[2][7],1)
+        self.energy = 200
         self.dust = 0
 
         self.grown = False
@@ -55,14 +56,14 @@ class Cell():
 
     def tick(self):
         if self.genome[0] > -1:
-            if self.energy > 16:  # and not self.grown:
+            if self.energy > self.energy_losing*8:  # and not self.grown:
                 self.grown = True
                 self.grow()
 
             if field_mana[self.x][self.y] > 0:
                 self.energy += min(field_mana[self.x][self.y], self.eat)
                 field_mana[self.x][self.y] -= min(field_mana[self.x][self.y], self.eat)
-            if self.energy > 10:
+            if self.energy > self.energy_losing*5:
                 for s in shifter:
                     c = field[(self.x + s[0]) % X][(self.y + s[1]) % Y]
                     if c.color == self.color and c.energy < self.energy:
@@ -70,7 +71,7 @@ class Cell():
                         self.energy -= self.energy // 5
             self.energy -= self.energy_losing
             self.dust += 1
-            if self.energy <= 0 or self.dust > self.death_time * 20:
+            if self.energy <= 0 or  self.dust > self.death_time * 40:
                 self.die()
 
     def die(self):
@@ -88,13 +89,13 @@ class Cell():
 
             if new_gen < 0:
                 cell.die()
-                self.energy -= 4
+                self.energy -= self.energy_losing*2
             elif new_gen >= 10:
                 continue
             elif cell.genome[0] == -1 or i == 4:
                 cell.genome = self.genome[:]  # **
                 if random() < 0.02 * (1 - debug1):  # мутация
-                    cell.genome[2 + randint(0, 9)][randint(0, 4)] = randint(-5, 20)
+                    cell.genome[2 + randint(0, 9)][randint(0, 7)] = randint(-5, 20)
                     color_shift = 20
                     cell.genome[1] = (nearby_color(self.color[0], color_shift),
                                       nearby_color(self.color[1], color_shift),
@@ -102,7 +103,8 @@ class Cell():
                 cell.genome[0] = new_gen
                 cell.color = cell.genome[1]
                 cell.eat = cell.genome[2 + cell.genome[0]][5]
-                cell.death_time = cell.genome[2 + cell.genome[0]][6]
+                cell.death_time = max(cell.genome[2 + cell.genome[0]][6],1)
+
                 cell.energy_losing = cell.genome[2 + cell.genome[0]][7]
                 cell.dust = 0
                 cell.energy = self.energy // 2
@@ -130,21 +132,24 @@ for i in range(X):
         field[i].append(Cell(i, j, genome))
 
 if debug1 or 1:
-    field[X // 2][Y // 2].genome =[0, (42, 188, 78), [-2, 15, 10, 17, 15, 9, 19, 0], [0, 17, 14, 3, 5, 11, 10, 14], [-4, 2, 17, 0, 1, 19, 6, 3], [0, -5, 12, 13, 20, 20, 17, 6], [12, 11, 16, 6, -2, 2, 18, 9], [-3, 6, 18, -5, 5, 12, 11, 12], [20, 3, 3, -5, 2, 18, 17, 7], [5, -5, 18, -1, 16, 3, 14, 10], [7, 19, 0, 18, 20, 7, 5, 10], [-1, -1, 11, -1, -1, 19, 13, 7]]
+    field[X // 2][Y // 2].genome = [0, (224, 113, 133), [16, 0, 0, 16, 16, 18, 17, -4], [14, 9, 10, 2, 0, 2, 4, 16], [-3, 2, 13, 10, 14, 1, 6, 14], [18, 2, 12, 14, 9, 19, 16, 1], [11, 3, -5, 9, 17, 10, 20, -5], [14, 17, 10, 4, 7, 20, 16, 9], [3, 5, 6, 7, 6, -1, -3, 18], [12, 3, 12, 7, 1, 17, 9, 5], [3, -1, 10, 17, 18, 6, 2, 3], [2, 12, 11, 6, 18, 5, -1, 19]]
+
 field_mana = []
 for i in range(X):
     field_mana.append([])
     for j in range(Y):
         field_mana[i].append(randint(100, 1000))
 
-field_dust = []
-for i in range(X):
-    field_dust.append([])
-    for j in range(Y):
-        field_dust[i].append(0)
+# field_dust = []
+# for i in range(X):
+#     field_dust.append([])
+#     for j in range(Y):
+#         field_dust[i].append(0)
 
 direction_mana = 2
-direction_dust = 0
+
+
+# direction_dust = 0
 
 
 def tick_field(field, direction):
@@ -162,9 +167,10 @@ def tick_field(field, direction):
                 field[i][j] -= min(dif, field[i][j])
 
 
-flag_a = 0
+flag_a = 1
 flag_b = 0
-flag_c = 1
+flag_c = 0
+flag_d = 0
 update = 1
 running = True
 while running:
@@ -178,11 +184,13 @@ while running:
                 flag_b = 1 - flag_b
             if events.key == K_3:
                 flag_c = 1 - flag_c
+            if events.key == K_4:
+                flag_d = 1 - flag_d
             if events.key == K_SPACE:
                 update = 1 - update
         if events.type == MOUSEBUTTONDOWN:
             if events.button == 1:
-                if field[events.pos[0] // k][events.pos[1] // k].genome[0]>-1:
+                if field[events.pos[0] // k][events.pos[1] // k].genome[0] > -1:
                     print(field[events.pos[0] // k][events.pos[1] // k].genome)
             # event.button: 1 - левая, 2 - средняя (колесо), 3 - правая
 
@@ -192,12 +200,14 @@ while running:
         for i in range(len(field)):
             for j in range(len(field[i])):
                 field[i][j].tick()
-                c0 = abs(min(254 * 4, field_mana[i][j]) // 4) * flag_a
-                c1 = abs(min(254, field_dust[i][j] * 4)) * flag_b
-                c = (c0, c1, 0)
+                c0 = abs(min(254 * 4, field_mana[i][j]) // 4) * flag_b
+                # c1 = abs(min(254, field_dust[i][j] * 4)) * flag_b
+                c1 = min(254,field[i][j].energy) * flag_c
+                c2= min(254,int(255*field[i][j].dust/(field[i][j].death_time*20))) * flag_d
+                c = (c0, c1, c2)
                 draw.rect(screen, c, Rect(i * k, j * k, k, k))
 
-                if flag_c and field[i][j].genome[0] > -1:
+                if flag_a and field[i][j].genome[0] > -1:
                     draw.rect(screen, field[i][j].color, Rect(i * k, j * k, k, k))
                     # text_surface = font.render(str(field[i][j].genome[0]), True, (200, 200, 200))
                     # screen.blit(text_surface, (i * k, j * k))
