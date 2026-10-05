@@ -43,24 +43,38 @@ class Cell():
         self.y = y
         self.genome = genome  # [1, (0, 0, 30), [1, 2, 3, 4, 5], [2, 3, 4, 5, 6], ...]
         self.color = self.genome[1]
+
+        self.eat = self.genome[2][5]
+        self.death_time = self.genome[2][6]
+        self.energy_losing = self.genome[2][7]
         self.energy = 10
         self.dust = 0
-        self.death_time = randint(50, 1000)
+
+        self.grown = False
+        # жрать потреблять подыхать
 
     def tick(self):
         if self.genome[0] > -1:
-            if self.energy > 16:
+            if self.energy > 16:  # and not self.grown:
+                self.grown = True
                 self.grow()
 
             if field_mana[self.x][self.y] > 0:
-                self.energy += min(field_mana[self.x][self.y], 6)
-                field_mana[self.x][self.y] -= min(field_mana[self.x][self.y], 6)
-            self.energy -= 2
+                self.energy += min(field_mana[self.x][self.y], self.eat)
+                field_mana[self.x][self.y] -= min(field_mana[self.x][self.y], self.eat)
+            if self.energy > 10:
+                for s in shifter:
+                    c = field[(self.x + s[0]) % X][(self.y + s[1]) % Y]
+                    if c.color == self.color and c.energy < self.energy:
+                        c.energy += self.energy // 5
+                        self.energy -= self.energy // 5
+            self.energy -= self.energy_losing
             self.dust += 1
-            if self.energy <= 0 or self.dust > self.death_time:
+            if self.energy <= 0 or self.dust > self.death_time * 20:
                 self.die()
 
     def die(self):
+        self.grown = False
         self.genome[0] = -1
         self.energy = 0
         # field_dust[self.x][self.y] = self.dust
@@ -75,30 +89,31 @@ class Cell():
             if new_gen < 0:
                 cell.die()
                 self.energy -= 4
-            if new_gen >= 10:
+            elif new_gen >= 10:
                 continue
-            if cell.genome[0] == -1 or i == 4:
+            elif cell.genome[0] == -1 or i == 4:
                 cell.genome = self.genome[:]  # **
                 if random() < 0.02 * (1 - debug1):  # мутация
-                    cell.genome[2 + randint(0, 9)][randint(0, 4)] = randint(-1, 20)
+                    cell.genome[2 + randint(0, 9)][randint(0, 4)] = randint(-5, 20)
                     color_shift = 20
                     cell.genome[1] = (nearby_color(self.color[0], color_shift),
                                       nearby_color(self.color[1], color_shift),
                                       nearby_color(self.color[2], color_shift))
                 cell.genome[0] = new_gen
                 cell.color = cell.genome[1]
-
-                cell.death_time = self.death_time
+                cell.eat = cell.genome[2 + cell.genome[0]][5]
+                cell.death_time = cell.genome[2 + cell.genome[0]][6]
+                cell.energy_losing = cell.genome[2 + cell.genome[0]][7]
                 cell.dust = 0
                 cell.energy = self.energy // 2
                 self.energy //= 2
 
 
 def create_genome():
-    genome = [0, (randint(0, 255), randint(0, 255), randint(0, 255))]
+    genome = [-1, (randint(0, 255), randint(0, 255), randint(0, 255))]
     for z in range(10):
         gen = []
-        for z0 in range(5):
+        for z0 in range(8):
             gen.append(randint(-1, 20))
         genome.append(gen)
     return genome
@@ -109,39 +124,13 @@ field = []
 for i in range(X):
     field.append([])
     for j in range(Y):
-        if random() < 0.001 and not debug1:
-            genome = create_genome()
-        else:
-            genome = [-1, (randint(0, 255), randint(0, 255), randint(0, 255))]
-
+        genome = create_genome()
+        if random() < 0.1 and not debug1:
+            genome[0] = 0
         field[i].append(Cell(i, j, genome))
-if debug1 or 1:
-    field[X // 2][Y // 2].genome = [0, (0, 255, 0), [1, 11, 1, 11, 0],[2, 11, 2, 11, 0],[3, 11, 3, 11, 0],[0, 0, 0, 0, 4],[11, 11, 11, 11, -1],[1, 11, 1, 11, 0],[1, 11, 1, 11, 0],[1, 11, 1, 11, 0],[1, 11, 1, 11, 0],[1, 11, 1, 11, 0]
-                                    ]
-    # field[3*X // 4][Y // 4].genome = [0, (221, 31, 0), [0,0,0,0,1],[11,11,11,11,11]]
-    # [6, (151, 23, 82), [14, 8, -1, 6, 8], [10, 10, 20, 14, 18], [0, 0, 13, 8, 0], [5, 4, 2, 12, 12], [17, 15, 1, 5, 5],
-    #  [12, 5, 16, 20, 3], [19, 8, 16, 18, 19], [2, 3, 9, 8, 0], [17, 8, 11, 17, 12], [11, 8, 12, 3, 10]]
-    # [2, (91, 205, 4), [16, 1, 5, 1, -1], [20, 7, 4, 10, -1], [7, 17, 8, 20, 10], [9, 17, 5, 10, 2], [16, 19, 11, 2, 1],
-    #  [10, 12, 15, 13, 8], [12, 18, 9, 17, 8], [20, 7, 19, 15, 10], [3, 15, 16, 5, 20], [12, 5, 2, 3, 13]]
-    # [8, (91, 205, 4), [2, 9, 1, 9, -1], [5, 7, 4, 16, 15], [3, 17, 8, 9, 6], [9, 2, 5, 10, 12], [7, 3, 17, 2, 1],
-    #  [3, 12, 15, 13, 8], [12, 10, 15, 17, 17], [20, 5, 17, 5, 13], [7, 10, 16, 5, 20], [8, 5, 1, 3, 13]]
-    # [6, (71, 223, 240), [16, 9, 10, 15, 10], [5, 7, 15, 16, 15], [3, 13, 17, 3, 20], [9, 2, -1, 15, 17],
-    #  [10, 3, 17, 2, 16], [10, 6, 15, 5, 9], [19, 10, 15, 17, 12], [10, 13, 17, 1, 13], [7, 10, 15, 16, 18],
-    #  [0, 20, 1, 3, 19]]
-    # [7, (99, 221, 223), [17, 10, 8, 11, 8], [1, 14, 7, 11, 1], [2, 7, 5, 2, 18], [10, 7, 17, 11, 13], [12, 1, 9, 17, 5],
-    #  [8, 2, 12, 15, 4], [11, 6, 14, 10, 12], [5, 7, 5, 0, 10], [-1, 6, 14, 11, 5], [18, 0, 4, 17, 2]]
-    # [3, (73, 26, 56), [7, 20, 11, 20, 20], [13, 3, 12, 4, 8], [10, 19, 9, 20, 7], [7, 17, 1, 11, 14], [0, 9, 8, 10, 6],
-    #  [2, 5, 10, 4, 19], [20, 4, 9, 13, 19], [8, 20, 20, 14, 2], [15, 14, 17, 8, 15], [18, 20, 19, 17, 0]]
-    # [4, (150, 147, 88), [20, 17, 11, 1, 8], [19, 14, -1, 12, -1], [19, 10, 5, 4, 5], [3, 10, 7, 6, 2],
-    #  [14, 17, 4, 19, 15], [10, 7, -1, 16, 8], [11, 4, 15, 18, 20], [18, 4, 16, 6, 20], [9, 4, 4, 14, 2],
-    #  [6, 10, 15, 19, 12]]
-    # [8, (73, 26, 56), [7, 20, 19, 20, 20], [13, 0, 12, 4, 8], [10, 19, 9, 20, 7], [7, 17, 1, 11, 14], [0, 9, 8, 10, 6],
-    #  [2, 5, 10, 4, 19], [20, 4, 9, 13, 19], [8, 20, 20, 14, 2], [15, 14, 17, 8, 15], [18, 20, 19, 17, 0]]
-    # [9, (229, 234, 5), [10, 15, 3, 0, 7], [5, 15, 5, 4, 16], [14, 7, 11, 11, 4], [-1, 18, 12, 1, 12],
-    #  [17, 14, 6, 6, 19], [12, 12, 18, 20, 16], [0, 1, 19, 12, 3], [15, 9, 1, 4, 1], [4, 9, 3, 19, 14],
-    #  [12, 10, 9, 14, 16]]
 
-    # [5, (163, 9, 207), [16, 8, 6, 3, 0], [-1, 20, 3, 4, 13], [12, 15, 11, 18, 1], [-1, 2, 20, 2, 2], [16, 15, 18, 9, 2], [4, 11, 19, 14, 20], [19, 17, 8, 3, 15], [11, 10, 3, 20, 16], [16, 15, 8, 13, 4], [7, 12, 12, 7, 15]]
+if debug1 or 1:
+    field[X // 2][Y // 2].genome =[0, (42, 188, 78), [-2, 15, 10, 17, 15, 9, 19, 0], [0, 17, 14, 3, 5, 11, 10, 14], [-4, 2, 17, 0, 1, 19, 6, 3], [0, -5, 12, 13, 20, 20, 17, 6], [12, 11, 16, 6, -2, 2, 18, 9], [-3, 6, 18, -5, 5, 12, 11, 12], [20, 3, 3, -5, 2, 18, 17, 7], [5, -5, 18, -1, 16, 3, 14, 10], [7, 19, 0, 18, 20, 7, 5, 10], [-1, -1, 11, -1, -1, 19, 13, 7]]
 field_mana = []
 for i in range(X):
     field_mana.append([])
@@ -193,7 +182,8 @@ while running:
                 update = 1 - update
         if events.type == MOUSEBUTTONDOWN:
             if events.button == 1:
-                print(field[events.pos[0] // k][events.pos[1] // k].genome)
+                if field[events.pos[0] // k][events.pos[1] // k].genome[0]>-1:
+                    print(field[events.pos[0] // k][events.pos[1] // k].genome)
             # event.button: 1 - левая, 2 - средняя (колесо), 3 - правая
 
     if update:
