@@ -48,7 +48,7 @@ class Cell():
         self.death_time = max(self.genome[2][6],1)
 
         self.energy_losing = max(self.genome[2][7],1)
-        self.energy = 200
+        self.energy = 10
         self.dust = 0
 
         self.grown = False
@@ -71,14 +71,14 @@ class Cell():
                         self.energy -= self.energy // 5
             self.energy -= self.energy_losing
             self.dust += 1
-            if self.energy <= 0 or  self.dust > self.death_time * 40:
+            if self.energy <= 0 or  self.dust > self.death_time * 40 or field_dust[self.x][self.y]>500:
                 self.die()
 
     def die(self):
         self.grown = False
         self.genome[0] = -1
         self.energy = 0
-        # field_dust[self.x][self.y] = self.dust
+        field_dust[self.x][self.y] += self.dust
         self.dust = 0
         self.color = (255, 255, 255)
 
@@ -132,7 +132,9 @@ for i in range(X):
         field[i].append(Cell(i, j, genome))
 
 if debug1 or 1:
-    field[X // 2][Y // 2].genome = [0, (224, 113, 133), [16, 0, 0, 16, 16, 18, 17, -4], [14, 9, 10, 2, 0, 2, 4, 16], [-3, 2, 13, 10, 14, 1, 6, 14], [18, 2, 12, 14, 9, 19, 16, 1], [11, 3, -5, 9, 17, 10, 20, -5], [14, 17, 10, 4, 7, 20, 16, 9], [3, 5, 6, 7, 6, -1, -3, 18], [12, 3, 12, 7, 1, 17, 9, 5], [3, -1, 10, 17, 18, 6, 2, 3], [2, 12, 11, 6, 18, 5, -1, 19]]
+    field[X // 2][Y // 2].genome =[7, (204, 200, 87), [-4, 11, -3, 7, 1, 2, 1, 1], [-4, 16, 7, 0, 16, 9, 20, 3], [4, 6, 2, 17, 3, 17, 3, 18], [16, 5, 3, 4, 17, 18, 18, 7], [20, 6, 14, -4, 9, 16, 9, 18], [5, -1, 2, 17, 12, 17, -1, 16], [11, 9, 13, 19, 12, 18, -3, 6], [18, 0, -5, 15, 15, 20, 2, 1], [7, 16, 16, 9, 18, -5, 1, -5], [-4, 3, 8, 15, 20, 12, 5, 0]]
+
+        #[0, (224, 113, 133), [16, 0, 0, 16, 16, 18, 17, -4], [14, 9, 10, 2, 0, 2, 4, 16], [-3, 2, 13, 10, 14, 1, 6, 14], [18, 2, 12, 14, 9, 19, 16, 1], [11, 3, -5, 9, 17, 10, 20, -5], [14, 17, 10, 4, 7, 20, 16, 9], [3, 5, 6, 7, 6, -1, -3, 18], [12, 3, 12, 7, 1, 17, 9, 5], [3, -1, 10, 17, 18, 6, 2, 3], [2, 12, 11, 6, 18, 5, -1, 19]]
 
 field_mana = []
 for i in range(X):
@@ -140,16 +142,16 @@ for i in range(X):
     for j in range(Y):
         field_mana[i].append(randint(100, 1000))
 
-# field_dust = []
-# for i in range(X):
-#     field_dust.append([])
-#     for j in range(Y):
-#         field_dust[i].append(0)
+field_dust = []
+for i in range(X):
+    field_dust.append([])
+    for j in range(Y):
+        field_dust[i].append(0)
 
 direction_mana = 2
 
 
-# direction_dust = 0
+direction_dust = 0
 
 
 def tick_field(field, direction):
@@ -157,9 +159,10 @@ def tick_field(field, direction):
     direction %= 4
     for i in range(X):
         for j in range(Y):
-            if randint(0, 10000) == 0:
-                field_mana[i][j] = 5000
-            dif = randint(0, field_mana[i][j] // 10)
+            if randint(0, 1000) == 0:
+                field_mana[i][j] += 500
+                field_dust[i][j] = 0
+            dif = randint(0, field[i][j] // 10)
             if field[(i + shifter[int(direction)][0]) % X][(j + shifter[int(direction)][1]) % Y] < 500:
                 field[(i + shifter[int(direction)][0]) % X][(j + shifter[int(direction)][1]) % Y] += min(dif,
                                                                                                          field[i][
@@ -196,14 +199,15 @@ while running:
 
     if update:
         tick_field(field_mana, direction_mana)
-        # tick_field(field_dust, direction_dust)
+        tick_field(field_dust, direction_dust)
         for i in range(len(field)):
             for j in range(len(field[i])):
                 field[i][j].tick()
                 c0 = abs(min(254 * 4, field_mana[i][j]) // 4) * flag_b
-                # c1 = abs(min(254, field_dust[i][j] * 4)) * flag_b
+                c2 = abs(min(254, field_dust[i][j] * 4)) * flag_d
                 c1 = min(254,field[i][j].energy) * flag_c
-                c2= min(254,int(255*field[i][j].dust/(field[i][j].death_time*20))) * flag_d
+                # c2= min(254,int(255*field[i][j].dust/(field[i][j].death_time*20))) * flag_d
+
                 c = (c0, c1, c2)
                 draw.rect(screen, c, Rect(i * k, j * k, k, k))
 
