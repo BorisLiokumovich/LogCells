@@ -45,9 +45,9 @@ class Cell():
         self.color = self.genome[1]
 
         self.eat = self.genome[2][5]
-        self.death_time = max(self.genome[2][6],1)
+        self.death_time = max(self.genome[2][6], 1)
 
-        self.energy_losing = max(self.genome[2][7],1)
+        self.energy_losing = max(self.genome[2][7], 1)
         self.energy = 10
         self.dust = 0
 
@@ -56,14 +56,18 @@ class Cell():
 
     def tick(self):
         if self.genome[0] > -1:
-            if self.energy > self.energy_losing*8:  # and not self.grown:
+            if self.energy > self.energy_losing * 8:  # and not self.grown:
                 self.grown = True
                 self.grow()
 
-            if field_mana[self.x][self.y] > 0:
+            if field_mana[self.x][self.y] > 0 and self.eat < 10:
                 self.energy += min(field_mana[self.x][self.y], self.eat)
                 field_mana[self.x][self.y] -= min(field_mana[self.x][self.y], self.eat)
-            if self.energy > self.energy_losing*5:
+            elif field_dust[self.x][self.y] > 0:
+                self.energy += min(field_dust[self.x][self.y], self.eat)
+                field_dust[self.x][self.y] -= min(field_dust[self.x][self.y], self.eat)
+
+            if self.energy > self.energy_losing * 5:
                 for s in shifter:
                     c = field[(self.x + s[0]) % X][(self.y + s[1]) % Y]
                     if c.color == self.color and c.energy < self.energy:
@@ -71,7 +75,7 @@ class Cell():
                         self.energy -= self.energy // 5
             self.energy -= self.energy_losing
             self.dust += 1
-            if self.energy <= 0 or  self.dust > self.death_time * 40 or field_dust[self.x][self.y]>500:
+            if self.energy <= 0 or self.dust > self.death_time * 40 or field_dust[self.x][self.y] > 500:
                 self.die()
 
     def die(self):
@@ -89,7 +93,7 @@ class Cell():
 
             if new_gen < 0:
                 cell.die()
-                self.energy -= self.energy_losing*2
+                self.energy -= self.energy_losing * 2
             elif new_gen >= 10:
                 continue
             elif cell.genome[0] == -1 or i == 4:
@@ -103,7 +107,7 @@ class Cell():
                 cell.genome[0] = new_gen
                 cell.color = cell.genome[1]
                 cell.eat = cell.genome[2 + cell.genome[0]][5]
-                cell.death_time = max(cell.genome[2 + cell.genome[0]][6],1)
+                cell.death_time = max(cell.genome[2 + cell.genome[0]][6], 1)
 
                 cell.energy_losing = cell.genome[2 + cell.genome[0]][7]
                 cell.dust = 0
@@ -127,14 +131,22 @@ for i in range(X):
     field.append([])
     for j in range(Y):
         genome = create_genome()
-        if random() < 0.1 and not debug1:
+        if random() < 0.5 and not debug1:
             genome[0] = 0
         field[i].append(Cell(i, j, genome))
 
 if debug1 or 1:
-    field[X // 2][Y // 2].genome =[7, (204, 200, 87), [-4, 11, -3, 7, 1, 2, 1, 1], [-4, 16, 7, 0, 16, 9, 20, 3], [4, 6, 2, 17, 3, 17, 3, 18], [16, 5, 3, 4, 17, 18, 18, 7], [20, 6, 14, -4, 9, 16, 9, 18], [5, -1, 2, 17, 12, 17, -1, 16], [11, 9, 13, 19, 12, 18, -3, 6], [18, 0, -5, 15, 15, 20, 2, 1], [7, 16, 16, 9, 18, -5, 1, -5], [-4, 3, 8, 15, 20, 12, 5, 0]]
+    field[X // 2][Y // 2].genome = [0, (255, 0, 0), [1, 19, 1, 19, 12, 9, 1, 1], [0,10, 0, 10, 11, 11, 1, 1],
+        # [7, (204, 200, 87), [-4, 11, -3, 7, 1, 2, 1, 1], [-4, 16, 7, 0, 16, 9, 20, 3],
+    [4, 6, 2, 17, 3, 17, 3, 18], [16, 5, 3, 4, 17, 18, 18, 7],
+                                    [20, 6, 14, -4, 9, 16, 9, 18], [5, -1, 2, 17, 12, 17, -1, 16],
+                                    [11, 9, 13, 19, 12, 18, -3, 6], [18, 0, -5, 15, 15, 20, 2, 1],
+                                    [7, 16, 16, 9, 18, -5, 1, -5], [-4, 3, 8, 15, 20, 12, 5, 0]]
 
-        #[0, (224, 113, 133), [16, 0, 0, 16, 16, 18, 17, -4], [14, 9, 10, 2, 0, 2, 4, 16], [-3, 2, 13, 10, 14, 1, 6, 14], [18, 2, 12, 14, 9, 19, 16, 1], [11, 3, -5, 9, 17, 10, 20, -5], [14, 17, 10, 4, 7, 20, 16, 9], [3, 5, 6, 7, 6, -1, -3, 18], [12, 3, 12, 7, 1, 17, 9, 5], [3, -1, 10, 17, 18, 6, 2, 3], [2, 12, 11, 6, 18, 5, -1, 19]]
+    # [0, (224, 113, 133), [16, 0, 0, 16, 16, 18, 17, -4], [14, 9, 10, 2, 0, 2, 4, 16], [-3, 2, 13, 10, 14, 1, 6, 14], [18, 2, 12, 14, 9, 19, 16, 1], [11, 3, -5, 9, 17, 10, 20, -5], [14, 17, 10, 4, 7, 20, 16, 9], [3, 5, 6, 7, 6, -1, -3, 18], [12, 3, 12, 7, 1, 17, 9, 5], [3, -1, 10, 17, 18, 6, 2, 3], [2, 12, 11, 6, 18, 5, -1, 19]]
+# [0, (139, 19, 201), [-1, 0, 0, 20, 12, 3, 20, -5], [18, 14, 16, -3, 2, 20, 6, 19], [4, 0, 19, 16, 0, 13, 19, 20], [18, 16, 1, 5, 17, 3, 20, 3], [8, 14, 7, 16, -5, 15, 7, 6], [5, 0, 17, 11, 2, 15, 6, 5], [10, 18, 0, 18, 12, 11, 9, 12], [-1, 6, 14, 4, 15, 3, 7, 9], [-3, 16, 6, 14, 5, 19, 3, -1], [8, -3, 13, 8, 7, 18, 8, 14]]
+# [0, (159, 29, 183), [-1, -2, 0, 20, 12, 3, 20, -5], [19, 14, 8, 13, 2, 20, 6, 19], [4, 0, 19, 4, 0, 13, 19, 20], [18, 16, 1, 5, 9, 1, 20, 11], [8, 14, 7, 16, -5, 15, 7, 6], [5, 13, 17, 11, 2, 15, 6, 5], [10, 18, 0, 18, 12, 11, 9, 12], [-1, 4, 11, 14, 15, 3, 7, 9], [17, 16, 6, 14, 5, 19, 3, -1], [8, 15, 13, 8, 7, 18, 8, 14]]
+# [9, (204, 34, 140), [2, 0, 10, 9, 3, 4, 10, -1], [19, 8, 11, 1, 20, 8, -1, 19], [-1, 19, 6, 4, 9, 15, 12, 12], [19, 14, 9, 5, 16, 7, 11, 3], [16, 17, -5, 10, -1, 7, 4, 13], [6, 11, 12, 0, 3, -5, 19, 19], [16, 10, 20, -1, -1, 19, 0, 19], [-1, 0, 8, 8, 0, 19, 13, 0], [20, 14, -3, 1, 11, 6, 15, 16], [13, 0, 7, 1, 14, 5, 17, -1]]
 
 field_mana = []
 for i in range(X):
@@ -149,7 +161,6 @@ for i in range(X):
         field_dust[i].append(0)
 
 direction_mana = 2
-
 
 direction_dust = 0
 
@@ -205,7 +216,7 @@ while running:
                 field[i][j].tick()
                 c0 = abs(min(254 * 4, field_mana[i][j]) // 4) * flag_b
                 c2 = abs(min(254, field_dust[i][j] * 4)) * flag_d
-                c1 = min(254,field[i][j].energy) * flag_c
+                c1 = min(254, field[i][j].energy) * flag_c
                 # c2= min(254,int(255*field[i][j].dust/(field[i][j].death_time*20))) * flag_d
 
                 c = (c0, c1, c2)
